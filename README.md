@@ -7,11 +7,10 @@
 ![Dataset](https://img.shields.io/badge/Dataset-UCI%20HAR-4CAF50?style=flat-square)
 ![Accuracy](https://img.shields.io/badge/Best%20Accuracy-96.40%25-2196F3?style=flat-square)
 ![Models](https://img.shields.io/badge/Models-3%20Architectures-9C27B0?style=flat-square)
-![Streamlit](https://img.shields.io/badge/Deployed-Streamlit-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)
  
 **Classifying human physical activities from wearable IMU sensor data using three progressively more powerful deep learning architectures.**
  
-[Results](#-results) • [Models](#-model-architectures) • [Setup](#-quick-start) • [Usage](#-usage) • [Deployment](#-deployment)
+[Results](#-results) • [Models](#-model-architectures) • [Setup](#-quick-start) • [Usage](#-usage) 
  
 </div>
  
@@ -176,18 +175,7 @@ Human-Activity-Recognition-using-Deep-Learning/
 ├── HAR_CNN-LSTM.ipynb              # Main notebook — full pipeline
 ├── README.md                       # This file
 ├── requirements.txt                # Python dependencies
-├── HAR_Report.pdf
-│
-├── UI/                     # Streamlit web app
-│   ├── app.py                      # UI — file upload, prediction, sensor chart
-│   ├── predict.py                  # Inference pipeline — preprocessing + forward pass
-│   ├── model.py                    # CNNLSTM class (matches trained architecture)
-│   ├── utils.py                    # validate_input, z_score, fft_features, fuse
-│   ├── best_CNN-LSTM.pt            # Trained weights (~20 MB)
-│   └── scaler.pkl                  # StandardScaler fit on 18-channel fused data
-│
-├──  data/
-│       └── sample.csv              # Built-in demo: 128-row sitting window (9 cols)
+├── HAR_Report_1.pdf
 │
 └── Results/
     ├── 01_training_curves.png
@@ -248,89 +236,7 @@ The best model is selected automatically after evaluation:
 BEST = max(ALL.keys(), key=lambda n: ALL[n]['metrics']['macro_f1'])
 # → 'CNN-LSTM'
 ```
- 
----
- 
-## 🌐 Deployment
- 
-The trained CNN-LSTM model is deployed as an interactive **Streamlit web application**, enabling end-users to upload raw sensor CSV files and receive real-time activity predictions — no machine learning knowledge required.
- 
-### Run the App
-```bash
-cd deployment
-pip install -r requirements.txt
-streamlit run app.py
-# Opens at http://localhost:8501
-```
- 
-### App Features
- 
-| Feature | Description |
-|---|---|
-| **CSV Upload** | Any (N, 9) sensor window — auto-padded/truncated to 128 rows |
-| **Prediction** | Activity label + softmax confidence % |
-| **Top-3** | Progress bars for top-3 predicted classes |
-| **Sensor Chart** | Line chart of body_acc_xyz over the 128-sample window |
-| **Try Sample** | Built-in sitting window demo — no upload needed |
-| **Sidebar** | Model info, 6 activity classes, test accuracy 96.40% |
- 
-### Inference Pipeline
- 
-The app mirrors the training preprocessing step-for-step to eliminate train/serving skew:
- 
-```
-raw (128,9)
-  → validate_input()      # assert 9 cols, pad/truncate to 128 rows
-  → z_score()             # scaler.mean_[:9] / scale_[:9]
-  → fft_features()        # rfft → (64,9), drop DC, normalise
-  → fuse()                # zero-pad FFT + concat → (128,18)
-  → .T → unsqueeze(0)     # (18,128) → (1,18,128) channels-first
-  → CNNLSTM forward()     # CNN → LSTM → LayerNorm → classifier
-  → softmax + argmax      # label + confidence %
-```
- 
-### CSV Format
- 
-Upload a CSV with **128 rows × 9 columns** (shorter windows are zero-padded automatically):
- 
-```
-body_acc_x, body_acc_y, body_acc_z, body_gyro_x, body_gyro_y, body_gyro_z, total_acc_x, total_acc_y, total_acc_z
-0.0289,    -0.0061,    -0.0250,    0.0023,      -0.0017,      0.0012,      0.0421,      -0.0089,     0.9812
-...
-```
- 
----
- 
-### 🗂️ How We Created sample.csv
- 
-The `sample.csv` bundled with the app is a real sensor window taken directly from the UCI HAR test set — not synthetic data. Here's the idea behind how any window becomes a CSV:
- 
-**Where the data lives**
- 
-The UCI HAR dataset stores each of the 9 sensor channels as a separate space-delimited `.txt` file inside `Inertial Signals/`. Each row in those files is one 128-sample window. So window #0 in `body_acc_x_test.txt` corresponds to window #0 in all other channel files — they all align row-by-row.
- 
-**What we did**
- 
-We picked a SITTING window from the test set, read the same row across all 9 channel files, and stacked them side-by-side into a single table with 128 rows and 9 columns. That table is `sample.csv`. The column names match the 9 sensor channels:
- 
-```
-body_acc_x  body_acc_y  body_acc_z
-body_gyro_x body_gyro_y body_gyro_z
-total_acc_x total_acc_y total_acc_z
-```
- 
-**To test a different activity**
- 
-Run the notebook up to the data-loading stage — `X_test_raw` will be available as a `(2947, 128, 9)` array and `y_test` as the matching labels. Pick any window index you like, slice out that row, and save it with `pd.DataFrame(window, columns=SIGNAL_NAMES).to_csv("my_sample.csv", index=False)`. Then upload it to the app.
- 
-> **Tip:** WALKING and LAYING windows give the highest confidence scores (typically 92%+). SITTING and STANDING are the hardest — the model may assign only 85–92% confidence because both postures produce near-identical near-zero acceleration signals.
- 
----
- 
-### Live Result
- 
-The app correctly predicts **SITTING with 90.5% confidence** from the built-in `sample.csv` (128×9 sitting sensor window). Second prediction: STANDING (3.4%) — expected given the SITTING/STANDING gravitational ambiguity discussed in the analysis section.
- 
+
 ---
  
 ## 📊 Generated Visualizations
